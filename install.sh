@@ -118,6 +118,24 @@ EOF
 
 chmod +x "$BIN_DIR/updater"
 
+# Create short alias upmm
+cat > "$BIN_DIR/upmm" << 'EOF'
+#!/bin/bash
+# Short alias for macos-updater (Update My Mac)
+exec "$HOME/.local/bin/macos-updater" "$@"
+EOF
+
+chmod +x "$BIN_DIR/upmm"
+
+# Create updatemymac alias
+cat > "$BIN_DIR/updatemymac" << 'EOF'
+#!/bin/bash
+# Alias for macos-updater
+exec "$HOME/.local/bin/macos-updater" "$@"
+EOF
+
+chmod +x "$BIN_DIR/updatemymac"
+
 echo -e "${GREEN}✓ Launcher scripts created${NC}"
 
 # Add to PATH if needed
@@ -176,6 +194,8 @@ echo -e "${NC}"
 echo -e "You can now run the updater with:"
 echo -e "  ${BLUE}macos-updater${NC}      - Launch the TUI interface"
 echo -e "  ${BLUE}updater${NC}            - Alias for macos-updater"
+echo -e "  ${BLUE}upmm${NC}               - Short alias (Update My Mac)"
+echo -e "  ${BLUE}updatemymac${NC}        - Full alias for macos-updater"
 echo -e "  ${BLUE}updater check${NC}      - Check for updates"
 echo -e "  ${BLUE}updater update${NC}     - Run updates from CLI"
 echo -e "  ${BLUE}updater status${NC}     - Show system status"
