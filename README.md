@@ -130,8 +130,11 @@ python run.py
 ```bash
 # Start the interactive TUI
 macos-updater
-# or
-updater
+
+# Or use these convenient aliases:
+updater       # Standard alias
+upmm          # Short alias (Update My Mac)
+updatemymac   # Full name alias
 ```
 
 ### Command-Line Interface

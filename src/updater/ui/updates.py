@@ -178,7 +178,7 @@ class UpdatesScreen(Widget):
         self.settings = load_settings()
         self.managers = []
         self.manager_widgets = {}
-        self.is_running = False
+        self._update_running = False
         self.worker: Worker | None = None
 
     def compose(self) -> ComposeResult:
@@ -270,7 +270,7 @@ class UpdatesScreen(Widget):
 
     def check_all_updates(self) -> None:
         """Check for updates from all enabled managers."""
-        if self.is_running:
+        if self._update_running:
             self._log("Update operation already in progress", "yellow")
             return
 
@@ -279,7 +279,7 @@ class UpdatesScreen(Widget):
 
     async def _check_updates_worker(self) -> None:
         """Worker to check updates."""
-        self.is_running = True
+        self._update_running = True
 
         for manager in self.managers:
             widget = self.manager_widgets[manager.name]
@@ -319,12 +319,12 @@ class UpdatesScreen(Widget):
                 self.call_from_thread(widget.update_status, UpdateStatus.FAILED, str(e))
                 self.call_from_thread(self._log, f"{manager.display_name}: Error - {str(e)}", "red")
 
-        self.is_running = False
+        self._update_running = False
         self.call_from_thread(self._log, "Update check completed", "bold")
 
     def run_updates(self) -> None:
         """Run updates for selected managers."""
-        if self.is_running:
+        if self._update_running:
             self._log("Update operation already in progress", "yellow")
             return
 
@@ -363,7 +363,7 @@ class UpdatesScreen(Widget):
 
     async def _run_updates_worker(self) -> None:
         """Worker to run updates."""
-        self.is_running = True
+        self._update_running = True
         results = []
         requires_reboot = False
 
@@ -417,7 +417,7 @@ class UpdatesScreen(Widget):
                 self.call_from_thread(widget.update_status, UpdateStatus.FAILED, str(e))
                 self.call_from_thread(self._log, f"{manager.display_name}: Error - {str(e)}", "red")
 
-        self.is_running = False
+        self._update_running = False
 
         # Summary
         total = len(results)
@@ -455,4 +455,4 @@ class UpdatesScreen(Widget):
         if self.worker:
             self.worker.cancel()
 
-        self.is_running = False
+        self._update_running = False

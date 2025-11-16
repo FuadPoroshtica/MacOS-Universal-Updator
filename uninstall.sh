@@ -51,6 +51,8 @@ fi
 echo -e "${BLUE}Removing launcher scripts...${NC}"
 rm -f "$BIN_DIR/macos-updater"
 rm -f "$BIN_DIR/updater"
+rm -f "$BIN_DIR/upmm"
+rm -f "$BIN_DIR/updatemymac"
 echo -e "${GREEN}✓ Launcher scripts removed${NC}"
 
 # Remove application files (keep config and logs)
