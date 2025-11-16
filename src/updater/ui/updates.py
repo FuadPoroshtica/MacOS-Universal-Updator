@@ -203,7 +203,7 @@ class UpdatesScreen(Widget):
 
                 with Vertical(id="log-panel"):
                     yield Static("Update Log", classes="log-title")
-                    yield Log(id="update-log", highlight=True, markup=True)
+                    yield Log(id="update-log")
 
     def on_mount(self) -> None:
         """Initialize managers on mount."""
@@ -233,11 +233,7 @@ class UpdatesScreen(Widget):
         """Add a message to the log."""
         log_widget = self.query_one("#update-log", Log)
         timestamp = datetime.now().strftime("%H:%M:%S")
-
-        if style:
-            log_widget.write_line(f"[{style}][{timestamp}] {message}[/]")
-        else:
-            log_widget.write_line(f"[{timestamp}] {message}")
+        log_widget.write_line(f"[{timestamp}] {message}")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""

@@ -98,7 +98,7 @@ class HistoryScreen(Widget):
             # Log Viewer
             with Container(id="logs-section"):
                 yield Static("Log Viewer", classes="section-title")
-                yield Log(id="log-viewer", highlight=True, markup=True)
+                yield Log(id="log-viewer")
 
             # Action Buttons
             with Horizontal(id="action-buttons"):
@@ -182,19 +182,11 @@ class HistoryScreen(Widget):
         logs = get_recent_logs(100)
 
         if not logs:
-            log_viewer.write_line("[dim]No recent logs available[/]")
+            log_viewer.write_line("No recent logs available")
             return
 
         for line in logs:
-            # Color code based on log level
-            if "ERROR" in line:
-                log_viewer.write_line(f"[red]{line.rstrip()}[/]")
-            elif "WARNING" in line:
-                log_viewer.write_line(f"[yellow]{line.rstrip()}[/]")
-            elif "INFO" in line:
-                log_viewer.write_line(f"[green]{line.rstrip()}[/]")
-            else:
-                log_viewer.write_line(line.rstrip())
+            log_viewer.write_line(line.rstrip())
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
