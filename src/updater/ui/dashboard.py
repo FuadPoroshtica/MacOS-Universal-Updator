@@ -270,7 +270,7 @@ class DashboardScreen(Widget):
             for mgr in managers:
                 available = await mgr.is_available()
                 status = "Available" if available else "Not Installed"
-                self.call_from_thread(
+                self.app.call_from_thread(
                     table.add_row,
                     f"{mgr.icon} {mgr.display_name}",
                     status,
@@ -392,7 +392,7 @@ class DashboardScreen(Widget):
                 available = await mgr.is_available()
 
                 if not available:
-                    self.call_from_thread(
+                    self.app.call_from_thread(
                         table.add_row,
                         f"{mgr.icon} {mgr.display_name}",
                         "Not Installed",
@@ -421,7 +421,7 @@ class DashboardScreen(Widget):
                         updates_str = "0"
                         info = "All packages current"
 
-                    self.call_from_thread(
+                    self.app.call_from_thread(
                         table.add_row,
                         f"{mgr.icon} {mgr.display_name}",
                         status,
@@ -429,7 +429,7 @@ class DashboardScreen(Widget):
                         info
                     )
                 except Exception as e:
-                    self.call_from_thread(
+                    self.app.call_from_thread(
                         table.add_row,
                         f"{mgr.icon} {mgr.display_name}",
                         "Error",
@@ -438,7 +438,7 @@ class DashboardScreen(Widget):
                     )
 
             # Update hint with summary
-            self.call_from_thread(
+            self.app.call_from_thread(
                 hint.update,
                 f"Scan complete. Total: {total_updates} update(s) available."
             )
