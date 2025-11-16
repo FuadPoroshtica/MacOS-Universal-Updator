@@ -3,8 +3,8 @@
 import asyncio
 from datetime import datetime
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal, Vertical, Grid
-from textual.widgets import Static, ProgressBar, Button, Label
+from textual.containers import Container, Horizontal, Vertical, Grid, ScrollableContainer
+from textual.widgets import Static, ProgressBar, Button, Label, DataTable
 from textual.reactive import reactive
 from textual.widget import Widget
 from textual.timer import Timer
@@ -18,6 +18,13 @@ from ..utils.system import (
 )
 from ..config.settings import load_settings
 from ..config.schedule import load_schedule, is_service_installed
+from ..managers import (
+    HomebrewManager,
+    MacOSUpdateManager,
+    AppStoreManager,
+    PipManager,
+    NpmManager
+)
 
 
 class MetricCard(Widget):
@@ -142,6 +149,13 @@ class DashboardScreen(Widget):
         height: auto;
     }
 
+    #software-status {
+        column-span: 3;
+        border: solid $primary;
+        padding: 1;
+        height: auto;
+    }
+
     .section-header {
         text-style: bold;
         color: $text;
@@ -151,6 +165,10 @@ class DashboardScreen(Widget):
     #resource-bars {
         height: auto;
         padding: 1;
+    }
+
+    #software-table {
+        height: 12;
     }
     """
 
@@ -203,8 +221,16 @@ class DashboardScreen(Widget):
                         yield Static("Disk Space:")
                         yield ProgressBar(total=100, id="disk-bar")
 
+                # Software Status - shows all available software with update counts
+                with Container(id="software-status"):
+                    yield Static("Software Update Status", classes="section-header")
+                    yield Static("Click 'Scan for Updates' to check all software", id="software-hint")
+                    yield DataTable(id="software-table")
+                    yield Button("Scan for Updates", variant="primary", id="btn-scan-updates")
+
     def on_mount(self) -> None:
         """Called when widget is mounted."""
+        self._setup_software_table()
         self.refresh_data()
         # Start periodic updates
         self._update_timer = self.set_interval(5, self._update_resources)
@@ -220,6 +246,39 @@ class DashboardScreen(Widget):
         self.call_later(self._load_tools_status)
         self.call_later(self._load_schedule_status)
         self._update_resources()
+        self._load_software_status()
+
+    def _setup_software_table(self) -> None:
+        """Setup the software status table."""
+        table = self.query_one("#software-table", DataTable)
+        table.add_columns("Software", "Status", "Updates", "Version/Info")
+
+    def _load_software_status(self) -> None:
+        """Load initial software status (availability only)."""
+        table = self.query_one("#software-table", DataTable)
+        table.clear()
+
+        managers = [
+            MacOSUpdateManager(),
+            HomebrewManager(),
+            AppStoreManager(),
+            PipManager(),
+            NpmManager(),
+        ]
+
+        async def check_availability():
+            for mgr in managers:
+                available = await mgr.is_available()
+                status = "Available" if available else "Not Installed"
+                self.call_from_thread(
+                    table.add_row,
+                    f"{mgr.icon} {mgr.display_name}",
+                    status,
+                    "Not scanned",
+                    "Click 'Scan for Updates'"
+                )
+
+        self.run_worker(check_availability, thread=True)
 
     def _load_system_info(self) -> None:
         """Load system information."""
@@ -307,6 +366,84 @@ class DashboardScreen(Widget):
             self.app.action_switch_tab("updates")
         elif event.button.id == "btn-system-info":
             self.app.push_screen(SystemInfoScreen())
+        elif event.button.id == "btn-scan-updates":
+            self._scan_for_updates()
+
+    def _scan_for_updates(self) -> None:
+        """Scan all managers for available updates."""
+        hint = self.query_one("#software-hint", Static)
+        hint.update("Scanning for updates... This may take a moment.")
+
+        table = self.query_one("#software-table", DataTable)
+        table.clear()
+
+        managers = [
+            MacOSUpdateManager(),
+            HomebrewManager(),
+            AppStoreManager(),
+            PipManager(),
+            NpmManager(),
+        ]
+
+        async def scan():
+            total_updates = 0
+            for mgr in managers:
+                # Check availability
+                available = await mgr.is_available()
+
+                if not available:
+                    self.call_from_thread(
+                        table.add_row,
+                        f"{mgr.icon} {mgr.display_name}",
+                        "Not Installed",
+                        "-",
+                        "Install to enable"
+                    )
+                    continue
+
+                # Check for updates
+                try:
+                    num_updates, packages = await mgr.check_updates()
+                    total_updates += num_updates
+
+                    if num_updates > 0:
+                        status = "Updates Available"
+                        updates_str = str(num_updates)
+                        # Show first few package names
+                        if packages:
+                            info = ", ".join(packages[:3])
+                            if len(packages) > 3:
+                                info += f" +{len(packages)-3} more"
+                        else:
+                            info = "Updates ready"
+                    else:
+                        status = "Up to Date"
+                        updates_str = "0"
+                        info = "All packages current"
+
+                    self.call_from_thread(
+                        table.add_row,
+                        f"{mgr.icon} {mgr.display_name}",
+                        status,
+                        updates_str,
+                        info
+                    )
+                except Exception as e:
+                    self.call_from_thread(
+                        table.add_row,
+                        f"{mgr.icon} {mgr.display_name}",
+                        "Error",
+                        "-",
+                        str(e)[:40]
+                    )
+
+            # Update hint with summary
+            self.call_from_thread(
+                hint.update,
+                f"Scan complete. Total: {total_updates} update(s) available."
+            )
+
+        self.run_worker(scan, thread=True)
 
 
 class SystemInfoScreen(Widget):
