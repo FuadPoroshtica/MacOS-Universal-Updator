@@ -37,29 +37,35 @@ class PipManager(BaseUpdateManager):
 
         pip_cmd = self._get_pip_command()
 
+        # Use JSON format which works reliably
         returncode, stdout, stderr = await self.run_command_simple(
-            [pip_cmd, "list", "--outdated", "--format=freeze"],
+            [pip_cmd, "list", "--outdated", "--format=json"],
             timeout=120
         )
 
-        if returncode != 0:
+        packages = []
+        if returncode == 0 and stdout.strip():
+            try:
+                import json
+                data = json.loads(stdout)
+                for pkg in data:
+                    packages.append(pkg.get("name", "Unknown"))
+            except Exception:
+                pass
+
+        # Fallback to tabular format if JSON fails
+        if not packages and returncode != 0:
             self.logger.warning(f"pip check returned non-zero: {stderr}")
-            # Try without format flag
             returncode, stdout, stderr = await self.run_command_simple(
                 [pip_cmd, "list", "--outdated"],
                 timeout=120
             )
 
-        packages = []
-        for line in stdout.strip().split("\n"):
-            if line.strip() and "==" in line:
-                package_name = line.split("==")[0].strip()
-                packages.append(package_name)
-            elif line.strip() and not line.startswith("Package") and not line.startswith("-"):
-                # Handle tabular format
-                parts = line.split()
-                if parts:
-                    packages.append(parts[0])
+            for line in stdout.strip().split("\n"):
+                if line.strip() and not line.startswith("Package") and not line.startswith("-"):
+                    parts = line.split()
+                    if parts and len(parts) >= 1:
+                        packages.append(parts[0])
 
         return len(packages), packages
 
@@ -72,14 +78,19 @@ class PipManager(BaseUpdateManager):
         # First, get list of outdated packages
         self.report_progress("Getting outdated packages...", 0.2)
         returncode, stdout, _ = await self.run_command_simple(
-            [pip_cmd, "list", "--outdated", "--format=freeze"],
+            [pip_cmd, "list", "--outdated", "--format=json"],
             timeout=120
         )
 
         packages = []
-        for line in stdout.strip().split("\n"):
-            if "==" in line:
-                packages.append(line.split("==")[0].strip())
+        if stdout.strip():
+            try:
+                import json
+                data = json.loads(stdout)
+                for pkg in data:
+                    packages.append(pkg.get("name", "Unknown"))
+            except Exception:
+                pass
 
         if not packages:
             yield "No packages to update."
